@@ -1,6 +1,6 @@
 import mysql.connector
 # Импортируем рабочую функцию расчета цены из предыдущего задания
-from discount import calculate_price
+from logic.discount import calculate_price
 
 
 def test_all_products():
