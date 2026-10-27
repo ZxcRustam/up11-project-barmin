@@ -1,11 +1,18 @@
-from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel
-from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QIcon, QPixmap
+from PySide6.QtWidgets import QApplication, QLabel, QMainWindow, QVBoxLayout, QWidget
+
+# Задание 4.1: Импортируем пул из database.py
+from database import Database
 
 
 class MainWindow(QMainWindow):
+
     def __init__(self):
         super().__init__()
+        # Создаем пул соединений с базой данных MySQL
+        self.db = Database()
+
         self.setWindowTitle("Мир подкастов — Каталог")
         self.resize(800, 600)
         self.setWindowIcon(QIcon("resources/icon.ico"))
@@ -15,15 +22,9 @@ class MainWindow(QMainWindow):
 
         logo = QLabel()
         logo.setPixmap(QPixmap("resources/logo.png"))
-        logo.setScaledContents(False)
+        logo.setScaledContents(False)  # не искажаем пропорции
         logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(logo)
-
-        # заголовок с названием темы
-        title = QLabel("Мир подкастов — Каталог")
-        title.setObjectName("title")
-        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(title)
 
         central.setLayout(layout)
         self.setCentralWidget(central)
@@ -37,11 +38,13 @@ class MainWindow(QMainWindow):
                 color: #000000;
                 font-family: Calibri;
             }
-            QLabel#title {
-                font-size: 24px;
-                font-weight: bold;
-            }
         """)
+
+    # Задание 4.1: Метод вызывается автоматически при нажатии на крестик
+    def closeEvent(self, event):
+        if self.db:
+            self.db.close_all()  # Безопасно закрываем пул
+        event.accept()  # Разрешаем окну закрыться
 
 
 if __name__ == "__main__":
