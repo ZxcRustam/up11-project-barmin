@@ -3,7 +3,8 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtWidgets import (
     QApplication, QHBoxLayout, QLabel, QMainWindow, 
-    QScrollArea, QVBoxLayout, QWidget, QPushButton, QMessageBox
+    QScrollArea, QVBoxLayout, QWidget, QPushButton, QMessageBox,
+    QComboBox, QLineEdit
 )
 
 from database import Database
@@ -14,7 +15,6 @@ ROLE_NAMES = {1: "Администратор", 2: "Менеджер", 3: "Пок
 DISCOUNT_LIMIT = 15
 DISCOUNT_COLOR = "#2E8B57"
 
-# Фирменный стиль для кнопок (Задание 4.1)
 BUTTON_STYLE = """
     QPushButton {
         background-color: #70B2AF;
@@ -26,8 +26,18 @@ BUTTON_STYLE = """
         border-radius: 4px;
         padding: 6px 14px;
     }
-    QPushButton:hover {
-        background-color: #5B9A97;
+    QPushButton:hover { background-color: #5B9A97; }
+"""
+
+COMBO_STYLE = """
+    QComboBox, QLineEdit {
+        font-family: Calibri;
+        font-size: 13px;
+        padding: 4px;
+        border: 1px solid #B0BEC5;
+        border-radius: 4px;
+        background-color: #FFFFFF;
+        min-width: 140px;
     }
 """
 
@@ -124,22 +134,18 @@ class MainWindow(QMainWindow):
         self.role_id = role_id          
         self.full_name = full_name      
         self.db = Database()
-        self.products = self.db.get_products()
 
         self.setWindowTitle("Мир подкастов — Каталог")
-        self.resize(800, 600)
+        self.resize(850, 650)
         self.setWindowIcon(QIcon("resources/icon.ico"))
 
-        # ЗАДАНИЯ 2.1 и 3.1: Основной белый фон и фирменный шрифт Calibri для QMainWindow
-        self.setStyleSheet("""
-            QMainWindow {
-                background-color: #FFFFFF;
-                font-family: Calibri;
-            }
-        """)
+        self.setStyleSheet("QMainWindow { background-color: #FFFFFF; font-family: Calibri; }")
 
         self.setup_ui()                 
-        self.setup_role_interface()     
+        self.setup_role_interface()
+        
+        # Загрузка каталога с первичными параметрами фильтров
+        self.load_products()     
 
     def setup_ui(self):
         central = QWidget()
@@ -147,17 +153,16 @@ class MainWindow(QMainWindow):
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(10)
 
-        # --- ЗАДАНИЕ 3.1 и 5.1: Создание header_widget с дополнительным фоном ---
+        # Header Widget
         header_widget = QWidget()
-        header_widget.setStyleSheet("background-color: #D2F6E7;")  # Дополнительный светло-зеленый фон
+        header_widget.setStyleSheet("background-color: #D2F6E7;")  
         header_layout = QHBoxLayout(header_widget)
         header_layout.setContentsMargins(15, 10, 15, 10)
 
-        # Логотип (Задание 5.1)
         logo_label = QLabel()
         logo_pixmap = QPixmap("resources/logo.png")
         logo_label.setPixmap(logo_pixmap.scaledToHeight(60, Qt.TransformationMode.SmoothTransformation))
-        logo_label.setScaledContents(False)  # Пропорции не искажены
+        logo_label.setScaledContents(False)  
         header_layout.addWidget(logo_label)
 
         header_layout.addStretch()
@@ -168,23 +173,50 @@ class MainWindow(QMainWindow):
         header_layout.addWidget(self.name_label)
 
         self.logout_button = QPushButton("Выход")
-        self.logout_button.setStyleSheet(BUTTON_STYLE)  # Бирюзовая кнопка (Задание 4.1)
+        self.logout_button.setStyleSheet(BUTTON_STYLE)  
         header_layout.addWidget(self.logout_button)
-        
-        main_layout.addWidget(header_widget)  # Добавляем виджет шапки в основной слой
-        # -----------------------------------------------------------------------
+        main_layout.addWidget(header_widget)  
 
-        # Панель кнопок ролей
+        # --- ПАНЕЛЬ ФИЛЬТРАЦИИ, ПОИСКА И СОРТИРОВКИ ---
+        top_widget = QWidget()
+        top_widget.setStyleSheet(COMBO_STYLE)
+        top_layout = QHBoxLayout(top_widget)
+        top_layout.setContentsMargins(15, 5, 15, 5)
+
+        # Строка ввода для поиска
+        self.search_input = QLineEdit()
+        self.search_input.setPlaceholderText("Поиск по названию или студии...")
+        self.search_input.textChanged.connect(self.load_products)
+        top_layout.addWidget(self.search_input)
+
+        # Выпадающий список категорий (Задание 3)
+        self.filter_combo = QComboBox()
+        self.filter_combo.addItem("Все категории")
+        for cat in self.db.get_categories():
+            # cat представляет собой кортеж, берем первый элемент
+            self.filter_combo.addItem(str(cat[0]))
+        self.filter_combo.currentIndexChanged.connect(self.load_products)
+        top_layout.addWidget(self.filter_combo)
+
+        # Выпадающий список направления сортировки цен (Задание 2)
+        self.sort_combo = QComboBox()
+        self.sort_combo.addItems(["По возрастанию", "По убыванию"])
+        self.sort_combo.currentIndexChanged.connect(self.load_products)
+        top_layout.addWidget(self.sort_combo)
+        
+        top_layout.addStretch()
+        main_layout.addWidget(top_widget)
+
+        # Панель функциональных кнопок ролей
         buttons_widget = QWidget()
         buttons_widget.setStyleSheet("background: transparent;")
         buttons_layout = QHBoxLayout(buttons_widget)
-        buttons_layout.setContentsMargins(15, 5, 15, 5)
+        buttons_layout.setContentsMargins(15, 0, 15, 0)
         
         self.order_button = QPushButton("Купить подкаст")
         self.manager_button = QPushButton("Заказы (менеджер)")
         self.admin_button = QPushButton("Админ-панель")
         
-        # Применяем бирюзовый стиль ко всем кнопкам ролей (Задание 4.1)
         self.order_button.setStyleSheet(BUTTON_STYLE)
         self.manager_button.setStyleSheet(BUTTON_STYLE)
         self.admin_button.setStyleSheet(BUTTON_STYLE)
@@ -196,18 +228,13 @@ class MainWindow(QMainWindow):
         buttons_layout.addStretch()
         main_layout.addWidget(buttons_widget)
 
-        # Контейнер каталога подкастов
+        # Изолированный контейнер каталога
         container = QWidget()
         container.setStyleSheet("background: transparent;")
-        list_layout = QVBoxLayout()
-        list_layout.setSpacing(10)
-        list_layout.setContentsMargins(15, 5, 15, 15)
-        
-        for product in self.products:
-            list_layout.addWidget(create_card(product))
-            
-        list_layout.addStretch()
-        container.setLayout(list_layout)
+        self.catalog_layout = QVBoxLayout()
+        self.catalog_layout.setSpacing(10)
+        self.catalog_layout.setContentsMargins(15, 5, 15, 15)
+        container.setLayout(self.catalog_layout)
 
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
@@ -217,6 +244,27 @@ class MainWindow(QMainWindow):
 
         central.setLayout(main_layout)
         self.setCentralWidget(central)
+
+    # --- МЕТОД ОБНОВЛЕНИЯ КАТАЛОГА В РЕАЛЬНОМ ВРЕМЕНИ (Задание 5 и 7) ---
+    def load_products(self):
+        search = self.search_input.text().strip()
+        category = self.filter_combo.currentText()
+        sort = self.sort_combo.currentText()
+        order = "ASC" if sort == "По возрастанию" else "DESC"
+
+        # Запрашиваем динамически отфильтрованный список подкастов из базы данных
+        products = self.db.get_products(search, category, order)
+
+        while self.catalog_layout.count():
+            item = self.catalog_layout.takeAt(0)
+            if item is not None:  # Защита от None, которая убирает все 3 ошибки Pylance
+                w = item.widget()
+                if w is not None:
+                    w.deleteLater()
+
+        # Заполняем каталог новыми карточками подкастов
+        for product in products:
+            self.catalog_layout.addWidget(create_card(product))
 
     def logout(self):
         reply = QMessageBox.question(
@@ -252,6 +300,7 @@ class MainWindow(QMainWindow):
         event.accept()
 
 
+# --- ТОЧКА ВХОДА В ПРИЛОЖЕНИЕ ---
 from login_window import LoginWindow
 
 if __name__ == "__main__":

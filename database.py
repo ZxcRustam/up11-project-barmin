@@ -16,7 +16,7 @@ class Database:
                 port=3306,
             )
         except mysql.connector.Error as e:
-            print(f"Ошибка БД: {e}")
+            print(f"Ошибка БД при инициализации пула: {e}")
             self.connection_pool = None
 
     def get_connection(self):
@@ -35,31 +35,67 @@ class Database:
             except mysql.connector.Error:
                 pass
 
-    def get_products(self):
+    # --- ЗАДАНИЕ 1.1: Получение списка уникальных категорий из БД ---
+    def get_categories(self):
         conn = self.get_connection()
         if conn is None:
             return []
         cursor = None
         try:
             cursor = conn.cursor()
-            cursor.execute("""
-            SELECT 
-                p.product_id, p.name, p.category_id, p.manufacturer AS studio, 
-                p.price, p.image_path, COALESCE(SUM(si.quantity), 0) AS total_quantity
-            FROM products p
-            LEFT JOIN stock_items si ON p.product_id = si.product_id
-            GROUP BY p.product_id, p.name, p.category_id, p.manufacturer, p.price, p.image_path;
-            """)
-            return cursor.fetchall()
+            cursor.execute("SELECT DISTINCT category_id FROM products ORDER BY category_id;")
+            categories = cursor.fetchall()
+            cursor.close()
+            return categories
+        except mysql.connector.Error as e:
+            print(f"Ошибка БД при получении категорий: {e}")
+            return []
+        finally:
+            self.release_connection(conn)
+
+    # --- ЗАДАНИЕ 5.1 и 7.1: Получение подкастов с поиском, фильтром и сортировкой (MySQL) ---
+    def get_products(self, search="", category_text="Все категории", order="ASC"):
+        conn = self.get_connection()
+        if conn is None:
+            return []
+        cursor = None
+        try:
+            cursor = conn.cursor()
+            pattern = f"%{search}%"
+            
+            # Базовый SQL-запрос с корректным GROUP BY для MySQL
+            query = f"""
+                SELECT 
+                    p.product_id, 
+                    p.name, 
+                    p.category_id, 
+                    p.manufacturer AS studio, 
+                    p.price, 
+                    p.image_path,
+                    COALESCE(SUM(si.quantity), 0) AS total_quantity
+                FROM products p
+                LEFT JOIN stock_items si ON p.product_id = si.product_id
+                WHERE (p.name LIKE %s OR p.manufacturer LIKE %s)
+                  AND (CAST(p.category_id AS CHAR) = %s OR %s = 'Все категории')
+                GROUP BY 
+                    p.product_id, 
+                    p.name, 
+                    p.category_id, 
+                    p.manufacturer, 
+                    p.price, 
+                    p.image_path
+                ORDER BY p.price {order};
+            """
+            cursor.execute(query, (pattern, pattern, category_text, category_text))
+            products = cursor.fetchall()
+            cursor.close()
+            return products
         except mysql.connector.Error as e:
             print(f"Ошибка БД при получении подкастов: {e}")
             return []
         finally:
-            if cursor:
-                cursor.close()
             self.release_connection(conn)
 
-    # --- ЗАДАНИЕ 7.1: Адаптированный метод для вашей темы подкастов ---
     def get_user_by_login(self, login):
         conn = self.get_connection()
         if conn is None:
@@ -67,7 +103,6 @@ class Database:
         cursor = None
         try:
             cursor = conn.cursor()
-            # COALESCE предотвратит появление "None" на месте отсутствующего отчества
             cursor.execute(
                 "SELECT user_id, role_id, last_name, first_name, COALESCE(middle_name, '') "
                 "FROM users WHERE login = %s;",
