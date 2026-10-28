@@ -1,3 +1,4 @@
+import os
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtWidgets import (
@@ -10,43 +11,58 @@ from PySide6.QtWidgets import (
     QWidget
 )
 
-# Импортируем настроенный класс базы данных
+# Импортируем пул соединений с базой данных
 from database import Database
 
 
-# --- ЗАДАНИЕ 6.1: Адаптированная функция карточки подкаста ---
+# --- ЗАДАНИЕ 6.1: Самостоятельная функция загрузки обложки подкаста ---
+def load_cover(image_path):
+    """Возвращает обложку подкаста из ресурсов или стандартную заглушку, если файла нет"""
+    if image_path:
+        full_path = os.path.join("resources", image_path)
+        if os.path.exists(full_path):
+            pixmap = QPixmap(full_path)
+            if not pixmap.isNull():
+                return pixmap
+                
+    # Если путь пустой, файла нет на диске или он поврежден — возвращаем заглушку
+    return QPixmap(os.path.join("resources", "picture.png"))
+
+
+# --- ЗАДАНИЕ 4 и 6.1: Функция создания карточки подкаста ---
 def create_card(product):
-    # Распаковываем кортеж строго по структуре нашего MySQL-запроса
+    # Распаковываем кортеж по структуре нашего MySQL-запроса
     (product_id, name, category_id, studio, price, image_path, total_quantity) = product
 
     card = QWidget()
     card_layout = QHBoxLayout()
 
-    # 1. Изображение подкаста (слева); если нет файла — заглушка picture.png
+    # Блок изображения: вызываем нашу самостоятельную функцию load_cover
     image_label = QLabel()
-    pixmap = QPixmap(f"resources/{image_path}") if image_path else QPixmap()
-    if pixmap.isNull():
-        pixmap = QPixmap("resources/picture.png")
+    cover_pixmap = load_cover(image_path)
     
-    image_label.setPixmap(pixmap.scaled(90, 90, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
-    image_label.setFixedSize(90, 90)
+    # Масштабируем обложку (100х100) с сохранением пропорций и сглаживанием
+    image_label.setPixmap(cover_pixmap.scaled(
+        100, 100, 
+        Qt.AspectRatioMode.KeepAspectRatio, 
+        Qt.TransformationMode.SmoothTransformation
+    ))
+    image_label.setFixedSize(100, 100)
     card_layout.addWidget(image_label)
 
-    # 2. Текстовые поля, адаптированные под тему «Мир подкастов» (по центру)
+    # Текстовые подписи, адаптированные под тему «Мир подкастов» (по центру)
     text_layout = QVBoxLayout()
     
-    # Студия | Название подкаста
     title_label = QLabel(f"{studio} | {name}")
     title_label.setStyleSheet("font-weight: bold; font-size: 14px; color: #1A237E;")
     text_layout.addWidget(title_label)
     
-    # Дополнительная информация о категории и лицензиях
     text_layout.addWidget(QLabel(f"ID Категории: {category_id}"))
     text_layout.addWidget(QLabel(f"Доступно для покупки: {int(total_quantity)} лицензий"))
     
     card_layout.addLayout(text_layout)
 
-    # 3. Цена подкаста (справа)
+    # Цена подкаста (справа)
     price_label = QLabel(f"{price} ₽")
     price_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #2E7D32;")
     price_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
@@ -54,7 +70,7 @@ def create_card(product):
 
     card.setLayout(card_layout)
     
-    # Красивая стилизация границ карточки
+    # Оформление границ карточки подкаста
     card.setStyleSheet("""
         QWidget {
             border: 1px solid #CFD8DC;
@@ -90,14 +106,14 @@ class MainWindow(QMainWindow):
         list_layout.setSpacing(10)
         list_layout.setContentsMargins(15, 15, 15, 15)
 
-        # Проходим циклом по всем 32 подкастам из MySQL
+        # Проходим циклом по всем подкастам из MySQL
         for product in self.products:
             list_layout.addWidget(create_card(product))
             
-        list_layout.addStretch()  # Прижимаем карточки к верху при прокрутке
+        list_layout.addStretch()  # Прижимаем карточки к верху
         container.setLayout(list_layout)
 
-        # Настраиваем прокручиваемую область (Scroll Area)
+        # Настраиваем область прокрутки (Scroll Area)
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setWidget(container)
