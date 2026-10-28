@@ -32,7 +32,9 @@ def calculate_discount(old_price, new_price):
     return (old_price - new_price) / old_price * 100
 
 
+# --- ЗАДАНИЕ 5.1: Адаптированная функция создания карточки для «Мир подкастов» ---
 def create_card(product):
+    # Распаковываем кортеж из MySQL запроса
     (product_id, name, category_id, studio, old_price_raw, image_path, total_quantity) = product
 
     card = QWidget()
@@ -49,44 +51,66 @@ def create_card(product):
     image_label.setFixedSize(100, 100)
     card_layout.addWidget(image_label)
 
-    # Текстовые метаданные подкаста
+    # Текстовые подписи под тему «Мир подкастов» (по центру)
     text_layout = QVBoxLayout()
     title_label = QLabel(f"{studio} | {name}")
     title_label.setStyleSheet("font-weight: bold; font-size: 14px; color: #1A237E;")
     text_layout.addWidget(title_label)
-    text_layout.addWidget(QLabel(f"ID Категории: {category_id}"))
+    text_layout.addWidget(QLabel(f"ID Категории подкаста: {category_id}"))
     text_layout.addWidget(QLabel(f"Доступно для покупки: {int(total_quantity)} лицензий"))
     card_layout.addLayout(text_layout)
 
-    # Логика расчёта цены и применения цвета скидки
+    # Расчет скидки для ценника
     old_price = float(old_price_raw)
     computed_price = calculate_price(product_id, old_price)
     new_price = float(computed_price) if computed_price is not None else old_price
-    
     discount = calculate_discount(old_price, new_price)
 
+    # Контейнер цен (справа)
     price_container = QVBoxLayout()
     price_label = QLabel(f"{new_price:.2f} ₽")
-    
-    if discount > DISCOUNT_LIMIT:
-        price_label.setStyleSheet(f"color: {DISCOUNT_COLOR}; font-weight: bold; font-size: 16px;")
-        old_price_label = QLabel(f"<s>{old_price:.2f} ₽</s>")
-        old_price_label.setStyleSheet("color: red; font-size: 12px;")
-        old_price_label.setAlignment(Qt.AlignmentFlag.AlignRight)
-        price_container.addWidget(old_price_label)
-    else:
-        price_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #2E7D32;")
-
     price_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+    
+    old_price_label = QLabel(f"<s>{old_price:.2f} ₽</s>")
+    old_price_label.setStyleSheet("color: #757575; font-size: 12px;")
+    old_price_label.setAlignment(Qt.AlignmentFlag.AlignRight)
+    price_container.addWidget(old_price_label)
+    
+    if discount > 0:
+        old_price_label.show()
+    else:
+        old_price_label.hide()
+
     price_container.addWidget(price_label)
     card_layout.addLayout(price_container)
 
     card.setLayout(card_layout)
-    card.setStyleSheet("""
-        QWidget { border: 1px solid #CFD8DC; border-radius: 8px; background-color: #FAFAFA; padding: 5px; }
-        QLabel { border: none; background: transparent; }
-    """)
+
+    # --- УСЛОВНАЯ ПОДСВЕТКА ПОДКАСТОВ ---
+    if total_quantity == 0:
+        # Подкаста нет в наличии (total_quantity = 0) — голубая карточка
+        card.setStyleSheet("""
+            QWidget { border: 1px solid #B0BEC5; border-radius: 8px; background-color: #ADD8E6; padding: 5px; }
+            QLabel { border: none; background: transparent; color: #000000; }
+        """)
+        price_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #1A237E;")
+    elif discount > DISCOUNT_LIMIT:
+        # Скидка > 15% — зелёный текст цены
+        card.setStyleSheet("""
+            QWidget { border: 1px solid #CFD8DC; border-radius: 8px; background-color: #FFFFFF; padding: 5px; }
+            QLabel { border: none; background: transparent; }
+        """)
+        price_label.setStyleSheet(f"color: {DISCOUNT_COLOR}; font-weight: bold; font-size: 16px;")
+    else:
+        # Обычный фон
+        card.setStyleSheet("""
+            QWidget { border: 1px solid #CFD8DC; border-radius: 8px; background-color: #FAFAFA; padding: 5px; }
+            QLabel { border: none; background: transparent; }
+        """)
+        price_label.setStyleSheet("font-size: 16px; font-weight: bold; color: #2E7D32;")
+
     return card
+
 
 
 class MainWindow(QMainWindow):
@@ -101,7 +125,6 @@ class MainWindow(QMainWindow):
         self.resize(800, 600)
         self.setWindowIcon(QIcon("resources/icon.ico"))
 
-        # Вызов строго в таком порядке
         self.setup_ui()                 
         self.setup_role_interface()     
 
@@ -109,7 +132,6 @@ class MainWindow(QMainWindow):
         central = QWidget()
         main_layout = QVBoxLayout()
 
-        # Панель заголовка (Header Layout)
         header_layout = QHBoxLayout()
         logo = QLabel()
         logo.setPixmap(QPixmap("resources/logo.png").scaled(
@@ -130,7 +152,6 @@ class MainWindow(QMainWindow):
         header_layout.addWidget(self.logout_button)
         main_layout.addLayout(header_layout)
 
-        # Панель кнопок ролей
         buttons_layout = QHBoxLayout()
         self.order_button = QPushButton("Купить подкаст")
         self.manager_button = QPushButton("Заказы (менеджер)")
@@ -142,7 +163,6 @@ class MainWindow(QMainWindow):
         buttons_layout.addStretch()
         main_layout.addLayout(buttons_layout)
 
-        # Список подкастов вынесен в изолированный контейнер каталога
         container = QWidget()
         list_layout = QVBoxLayout()
         list_layout.setSpacing(10)
