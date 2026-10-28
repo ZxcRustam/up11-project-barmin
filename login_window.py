@@ -10,7 +10,7 @@ class LoginWindow(QWidget):
         self.role_id = None
 
         self.setWindowTitle("Авторизация")
-        self.resize(300, 200)
+        self.resize(300, 220)
 
         layout = QVBoxLayout()
         layout.addWidget(QLabel("Логин:"))
@@ -23,6 +23,11 @@ class LoginWindow(QWidget):
         self.login_button.clicked.connect(self.check_login)
         layout.addWidget(self.login_button)
 
+        # ЗАДАНИЕ 2.1: Добавление кнопки входа для гостя
+        self.guest_button = QPushButton("Войти как гость")
+        self.guest_button.clicked.connect(self.login_as_guest)
+        layout.addWidget(self.guest_button)
+
         self.setLayout(layout)
 
     def check_login(self):
@@ -32,18 +37,22 @@ class LoginWindow(QWidget):
             QMessageBox.warning(self, "Ошибка", "Введите логин")
             return
 
-        # ЗАДАНИЕ 7.1: Вызов метода из класса Database вместо прямого SQL-кода здесь
         result = self.db.get_user_by_login(login)
 
         if result is None:
             QMessageBox.warning(self, "Ошибка", "Неверный логин")
         else:
-            # Распаковываем полученный кортеж из MySQL
             self.user_id = result[0]
             self.role_id = result[1]
 
-            # Переход к главному окну каталога подкастов
             from main import MainWindow
             self.main_window = MainWindow(role_id=self.role_id)
             self.main_window.show()
             self.close()
+
+    # ЗАДАНИЕ 2.1: Метод для входа в режиме гостя (без авторизации в БД)
+    def login_as_guest(self):
+        from main import MainWindow
+        self.main_window = MainWindow(role_id=None)
+        self.main_window.show()
+        self.close()

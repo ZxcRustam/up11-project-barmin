@@ -8,10 +8,15 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QScrollArea,
     QVBoxLayout,
-    QWidget
+    QWidget,
+    QPushButton
 )
 
+# Импортируем пул соединений с базой данных
 from database import Database
+
+# ЗАДАНИЕ 6.1: Словарь соответствия ID ролей и их названий для вашей темы подкастов
+ROLE_NAMES = {1: "Администратор", 2: "Менеджер", 3: "Покупатель", None: "Гость"}
 
 
 def load_cover(image_path):
@@ -61,32 +66,48 @@ def create_card(product):
             background-color: #FAFAFA;
             padding: 5px;
         }
-        QLabel {
-            border: none;
-            background: transparent;
-        }
+        QLabel { border: none; background: transparent; }
     """)
     return card
 
 
-# ЗАДАНИЕ 5.1: Обновленный класс главного окна с поддержкой роли пользователя
+# --- ГЛАВНОЕ ОКНО ПРИЛОЖЕНИЯ С АДАПТИРОВАННЫМИ РОЛЯМИ ---
 class MainWindow(QMainWindow):
     def __init__(self, role_id=None):
         super().__init__()
-        self.role_id = role_id  # Сохраняем ID роли
-        
+        self.role_id = role_id          
         self.db = Database()
         self.products = self.db.get_products()
 
+        # Базовый заголовок, который изменится в setup_role_interface
         self.setWindowTitle("Мир подкастов — Каталог")
         self.resize(800, 600)
         self.setWindowIcon(QIcon("resources/icon.ico"))
 
+        self.setup_ui()                 
+        self.setup_role_interface()     
+
+    # ЗАДАНИЕ 6.1: Подписи кнопок изменены под автоматизацию продаж подкастов
+    def setup_ui(self):
+        central = QWidget()
+        main_layout = QVBoxLayout()
+
+        buttons_layout = QHBoxLayout()
+        self.order_button = QPushButton("Купить подкаст")  # Изменили подпись
+        self.manager_button = QPushButton("Заказы (менеджер)")
+        self.admin_button = QPushButton("Админ-панель")
+        
+        buttons_layout.addWidget(self.order_button)
+        buttons_layout.addWidget(self.manager_button)
+        buttons_layout.addWidget(self.admin_button)
+        buttons_layout.addStretch()
+        main_layout.addLayout(buttons_layout)
+
         container = QWidget()
         list_layout = QVBoxLayout()
         list_layout.setSpacing(10)
-        list_layout.setContentsMargins(15, 15, 15, 15)
-
+        list_layout.setContentsMargins(5, 5, 5, 5)
+        
         for product in self.products:
             list_layout.addWidget(create_card(product))
             
@@ -96,18 +117,43 @@ class MainWindow(QMainWindow):
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setWidget(container)
-        self.setCentralWidget(scroll)
+        main_layout.addWidget(scroll)
+
+        central.setLayout(main_layout)
+        self.setCentralWidget(central)
 
         self.setStyleSheet("""
-            QMainWindow {
-                background-color: #FFFFFF;
-                font-family: Calibri;
+            QMainWindow, QWidget { font-family: Calibri; }
+            QLabel { color: #000000; }
+            QPushButton { 
+                padding: 6px 12px; 
+                font-size: 13px; 
+                background-color: #F5F5F5; 
+                border: 1px solid #B0BEC5; 
+                border-radius: 4px; 
             }
-            QLabel {
-                color: #000000;
-                font-family: Calibri;
-            }
+            QPushButton:hover { background-color: #E0E0E0; }
         """)
+
+    # ЗАДАНИЕ 6.1: Адаптированный метод с динамическим изменением заголовка роли подкастов
+    def setup_role_interface(self):
+        # По умолчанию скрываем все элементы управления
+        self.order_button.hide()
+        self.manager_button.hide()
+        self.admin_button.hide()
+
+        # Накатываем права видимости кнопок на основе ID роли
+        if self.role_id == 1:        # Администратор
+            self.admin_button.show()
+            self.manager_button.show()
+        elif self.role_id == 2:      # Менеджер
+            self.manager_button.show()
+        elif self.role_id == 3:      # Покупатель
+            self.order_button.show()
+
+        # Динамически меняем заголовок окна в зависимости от роли из словаря ROLE_NAMES
+        role_name = ROLE_NAMES.get(self.role_id, "Гость")
+        self.setWindowTitle(f"Мир подкастов — Каталог ({role_name})")
 
     def closeEvent(self, event):
         if self.db:
@@ -115,15 +161,11 @@ class MainWindow(QMainWindow):
         event.accept()
 
 
-# ЗАДАНИЕ 5.1: Измененный блок запуска всего приложения
 from login_window import LoginWindow
 
 if __name__ == "__main__":
     app = QApplication([])
     db = Database()
-    
-    # Сначала открываем и показываем окно авторизации
     login = LoginWindow(db)
     login.show()
-    
     app.exec()
