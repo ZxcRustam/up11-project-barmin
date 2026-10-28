@@ -1,6 +1,23 @@
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QLabel,
                                QLineEdit, QPushButton, QMessageBox)
 
+# Фирменный стиль для кнопок (Задание 4.1)
+BUTTON_STYLE = """
+    QPushButton {
+        background-color: #70B2AF;
+        color: white;
+        font-family: Calibri;
+        font-size: 13px;
+        font-weight: bold;
+        border: none;
+        border-radius: 4px;
+        padding: 6px 12px;
+    }
+    QPushButton:hover {
+        background-color: #5B9A97;
+    }
+"""
+
 
 class LoginWindow(QWidget):
     def __init__(self, db):
@@ -12,6 +29,22 @@ class LoginWindow(QWidget):
 
         self.setWindowTitle("Авторизация")
         self.resize(300, 220)
+        
+        # Общие стили для окна авторизации (Задание 2.1 и 3.1)
+        self.setStyleSheet("""
+            QWidget {
+                background-color: #FFFFFF;
+                font-family: Calibri;
+            }
+            QLabel {
+                color: #333333;
+            }
+            QLineEdit {
+                border: 1px solid #B0BEC5;
+                border-radius: 4px;
+                padding: 4px;
+            }
+        """)
 
         layout = QVBoxLayout()
         layout.addWidget(QLabel("Логин:"))
@@ -21,10 +54,12 @@ class LoginWindow(QWidget):
         layout.addWidget(self.login_input)
 
         self.login_button = QPushButton("Войти")
+        self.login_button.setStyleSheet(BUTTON_STYLE)  # Применяем акцентный цвет (Задание 4.1)
         self.login_button.clicked.connect(self.check_login)
         layout.addWidget(self.login_button)
 
         self.guest_button = QPushButton("Войти как гость")
+        self.guest_button.setStyleSheet(BUTTON_STYLE)  # Применяем акцентный цвет (Задание 4.1)
         self.guest_button.clicked.connect(self.login_as_guest)
         layout.addWidget(self.guest_button)
 
@@ -37,7 +72,6 @@ class LoginWindow(QWidget):
             QMessageBox.warning(self, "Ошибка", "Введите логин")
             return
 
-        # ЗАДАНИЕ 7.1: Вызов обновленного метода из базы данных
         result = self.db.get_user_by_login(login)
 
         if result is None:
@@ -45,8 +79,6 @@ class LoginWindow(QWidget):
         else:
             self.user_id = result[0]
             self.role_id = result[1]
-            
-            # ЗАДАНИЕ 7.1: Безопасная сборка ФИО из полученного среза таблицы users
             self.full_name = " ".join(p for p in result[2:5] if p)
 
             from main import MainWindow
