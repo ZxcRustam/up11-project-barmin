@@ -8,6 +8,7 @@ class LoginWindow(QWidget):
         self.db = db
         self.user_id = None
         self.role_id = None
+        self.full_name = None  
 
         self.setWindowTitle("Авторизация")
         self.resize(300, 220)
@@ -23,7 +24,6 @@ class LoginWindow(QWidget):
         self.login_button.clicked.connect(self.check_login)
         layout.addWidget(self.login_button)
 
-        # ЗАДАНИЕ 2.1: Добавление кнопки входа для гостя
         self.guest_button = QPushButton("Войти как гость")
         self.guest_button.clicked.connect(self.login_as_guest)
         layout.addWidget(self.guest_button)
@@ -37,6 +37,7 @@ class LoginWindow(QWidget):
             QMessageBox.warning(self, "Ошибка", "Введите логин")
             return
 
+        # ЗАДАНИЕ 7.1: Вызов обновленного метода из базы данных
         result = self.db.get_user_by_login(login)
 
         if result is None:
@@ -44,15 +45,17 @@ class LoginWindow(QWidget):
         else:
             self.user_id = result[0]
             self.role_id = result[1]
+            
+            # ЗАДАНИЕ 7.1: Безопасная сборка ФИО из полученного среза таблицы users
+            self.full_name = " ".join(p for p in result[2:5] if p)
 
             from main import MainWindow
-            self.main_window = MainWindow(role_id=self.role_id)
+            self.main_window = MainWindow(role_id=self.role_id, full_name=self.full_name)
             self.main_window.show()
             self.close()
 
-    # ЗАДАНИЕ 2.1: Метод для входа в режиме гостя (без авторизации в БД)
     def login_as_guest(self):
         from main import MainWindow
-        self.main_window = MainWindow(role_id=None)
+        self.main_window = MainWindow(role_id=None, full_name="Гость")
         self.main_window.show()
         self.close()

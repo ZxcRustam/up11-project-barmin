@@ -59,7 +59,7 @@ class Database:
                 cursor.close()
             self.release_connection(conn)
 
-    
+    # --- ЗАДАНИЕ 7.1: Адаптированный метод для вашей темы подкастов ---
     def get_user_by_login(self, login):
         conn = self.get_connection()
         if conn is None:
@@ -67,8 +67,10 @@ class Database:
         cursor = None
         try:
             cursor = conn.cursor()
+            # COALESCE предотвратит появление "None" на месте отсутствующего отчества
             cursor.execute(
-                "SELECT user_id, role_id FROM users WHERE login = %s;",
+                "SELECT user_id, role_id, last_name, first_name, COALESCE(middle_name, '') "
+                "FROM users WHERE login = %s;",
                 (login,)
             )
             return cursor.fetchone()

@@ -2,20 +2,12 @@ import os
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtWidgets import (
-    QApplication,
-    QHBoxLayout,
-    QLabel,
-    QMainWindow,
-    QScrollArea,
-    QVBoxLayout,
-    QWidget,
-    QPushButton
+    QApplication, QHBoxLayout, QLabel, QMainWindow, 
+    QScrollArea, QVBoxLayout, QWidget, QPushButton, QMessageBox
 )
 
-# Импортируем пул соединений с базой данных
 from database import Database
 
-# ЗАДАНИЕ 6.1: Словарь соответствия ID ролей и их названий для вашей темы подкастов
 ROLE_NAMES = {1: "Администратор", 2: "Менеджер", 3: "Покупатель", None: "Гость"}
 
 
@@ -60,26 +52,20 @@ def create_card(product):
 
     card.setLayout(card_layout)
     card.setStyleSheet("""
-        QWidget {
-            border: 1px solid #CFD8DC;
-            border-radius: 8px;
-            background-color: #FAFAFA;
-            padding: 5px;
-        }
+        QWidget { border: 1px solid #CFD8DC; border-radius: 8px; background-color: #FAFAFA; padding: 5px; }
         QLabel { border: none; background: transparent; }
     """)
     return card
 
 
-# --- ГЛАВНОЕ ОКНО ПРИЛОЖЕНИЯ С АДАПТИРОВАННЫМИ РОЛЯМИ ---
 class MainWindow(QMainWindow):
-    def __init__(self, role_id=None):
+    def __init__(self, role_id=None, full_name=None):
         super().__init__()
         self.role_id = role_id          
+        self.full_name = full_name      
         self.db = Database()
         self.products = self.db.get_products()
 
-        # Базовый заголовок, который изменится в setup_role_interface
         self.setWindowTitle("Мир подкастов — Каталог")
         self.resize(800, 600)
         self.setWindowIcon(QIcon("resources/icon.ico"))
@@ -87,13 +73,38 @@ class MainWindow(QMainWindow):
         self.setup_ui()                 
         self.setup_role_interface()     
 
-    # ЗАДАНИЕ 6.1: Подписи кнопок изменены под автоматизацию продаж подкастов
     def setup_ui(self):
         central = QWidget()
         main_layout = QVBoxLayout()
 
+        # Панель заголовка (Header Layout)
+        header_layout = QHBoxLayout()
+
+        logo = QLabel()
+        logo.setPixmap(QPixmap("resources/logo.png").scaled(
+            60, 60, 
+            Qt.AspectRatioMode.KeepAspectRatio, 
+            Qt.TransformationMode.SmoothTransformation
+        ))
+        header_layout.addWidget(logo)
+
+        header_layout.addStretch()
+
+        text = f"ФИО: {self.full_name}" if self.full_name else "Гость"
+        self.name_label = QLabel(text)
+        self.name_label.setStyleSheet("font-weight: bold; font-size: 14px; color: #333333;")
+        header_layout.addWidget(self.name_label)
+
+        # ЗАДАНИЕ 5.1: Кнопка «Выход» в панели заголовка справа от ФИО
+        self.logout_button = QPushButton("Выход")
+        self.logout_button.clicked.connect(self.logout)
+        header_layout.addWidget(self.logout_button)
+
+        main_layout.addLayout(header_layout)
+
+        # Панель кнопок ролей
         buttons_layout = QHBoxLayout()
-        self.order_button = QPushButton("Купить подкаст")  # Изменили подпись
+        self.order_button = QPushButton("Купить подкаст")
         self.manager_button = QPushButton("Заказы (менеджер)")
         self.admin_button = QPushButton("Админ-панель")
         
@@ -103,6 +114,7 @@ class MainWindow(QMainWindow):
         buttons_layout.addStretch()
         main_layout.addLayout(buttons_layout)
 
+        # Контейнер каталога подкастов
         container = QWidget()
         list_layout = QVBoxLayout()
         list_layout.setSpacing(10)
@@ -126,32 +138,39 @@ class MainWindow(QMainWindow):
             QMainWindow, QWidget { font-family: Calibri; }
             QLabel { color: #000000; }
             QPushButton { 
-                padding: 6px 12px; 
-                font-size: 13px; 
-                background-color: #F5F5F5; 
-                border: 1px solid #B0BEC5; 
-                border-radius: 4px; 
+                padding: 6px 12px; font-size: 13px; background-color: #F5F5F5; 
+                border: 1px solid #B0BEC5; border-radius: 4px; 
             }
             QPushButton:hover { background-color: #E0E0E0; }
         """)
 
-    # ЗАДАНИЕ 6.1: Адаптированный метод с динамическим изменением заголовка роли подкастов
+    # ЗАДАНИЕ 5.1: Метод для подтверждения выхода и переключения окон приложения
+    def logout(self):
+        reply = QMessageBox.question(
+            self, "Выход", "Вы уверены, что хотите выйти?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, 
+            QMessageBox.StandardButton.No
+        )
+        if reply == QMessageBox.StandardButton.Yes:
+            from login_window import LoginWindow
+            # Передаем новый чистый объект Database() для окна авторизации
+            self.login_window = LoginWindow(Database())
+            self.login_window.show()
+            self.close()
+
     def setup_role_interface(self):
-        # По умолчанию скрываем все элементы управления
         self.order_button.hide()
         self.manager_button.hide()
         self.admin_button.hide()
 
-        # Накатываем права видимости кнопок на основе ID роли
-        if self.role_id == 1:        # Администратор
+        if self.role_id == 1:        
             self.admin_button.show()
             self.manager_button.show()
-        elif self.role_id == 2:      # Менеджер
+        elif self.role_id == 2:      
             self.manager_button.show()
-        elif self.role_id == 3:      # Покупатель
+        elif self.role_id == 3:      
             self.order_button.show()
 
-        # Динамически меняем заголовок окна в зависимости от роли из словаря ROLE_NAMES
         role_name = ROLE_NAMES.get(self.role_id, "Гость")
         self.setWindowTitle(f"Мир подкастов — Каталог ({role_name})")
 
