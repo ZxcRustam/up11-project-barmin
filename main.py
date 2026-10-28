@@ -106,7 +106,7 @@ def create_card(product):
 
     card.setLayout(card_layout)
 
-    if total_quantity == 0:
+    if total_quantity == 0: # Подкаста нет в наличии (остаток 0) — вся карточка окрашивается в голубой цвет
         card.setStyleSheet("""
             QWidget { border: 1px solid #B0BEC5; border-radius: 8px; background-color: #ADD8E6; padding: 5px; }
             QLabel { border: none; background: transparent; color: #000000; }
@@ -282,7 +282,8 @@ class MainWindow(QMainWindow):
         self.order_button.hide()
         self.manager_button.hide()
         self.admin_button.hide()
-
+        
+# Администратор (role_id = 1) видит все кнопки
         if self.role_id == 1:        
             self.admin_button.show()
             self.manager_button.show()

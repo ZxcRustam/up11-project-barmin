@@ -43,7 +43,7 @@ class Database:
         cursor = None
         try:
             cursor = conn.cursor()
-            cursor.execute("SELECT DISTINCT category_id FROM products ORDER BY category_id;")
+            cursor.execute("SELECT DISTINCT category_id FROM products ORDER BY category_id")
             categories = cursor.fetchall()
             cursor.close()
             return categories
@@ -63,7 +63,7 @@ class Database:
             cursor = conn.cursor()
             pattern = f"%{search}%"
             
-            # Базовый SQL-запрос с корректным GROUP BY для MySQL
+            # Поиск подкастов по подстроке без учета регистра с помощью LIKE
             query = f"""
                 SELECT 
                     p.product_id, 
@@ -75,7 +75,7 @@ class Database:
                     COALESCE(SUM(si.quantity), 0) AS total_quantity
                 FROM products p
                 LEFT JOIN stock_items si ON p.product_id = si.product_id
-                WHERE (p.name LIKE %s OR p.manufacturer LIKE %s)
+                WHERE (p.name LIKE %s OR p.manufacturer LIKE %s)  
                   AND (CAST(p.category_id AS CHAR) = %s OR %s = 'Все категории')
                 GROUP BY 
                     p.product_id, 
@@ -84,7 +84,7 @@ class Database:
                     p.manufacturer, 
                     p.price, 
                     p.image_path
-                ORDER BY p.price {order};
+                ORDER BY p.price {order}
             """
             cursor.execute(query, (pattern, pattern, category_text, category_text))
             products = cursor.fetchall()
@@ -105,7 +105,7 @@ class Database:
             cursor = conn.cursor()
             cursor.execute(
                 "SELECT user_id, role_id, last_name, first_name, COALESCE(middle_name, '') "
-                "FROM users WHERE login = %s;",
+                "FROM users WHERE login = %s",
                 (login,)
             )
             return cursor.fetchone()
