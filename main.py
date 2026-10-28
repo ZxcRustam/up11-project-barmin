@@ -71,7 +71,7 @@ def create_card(product):
     if discount > DISCOUNT_LIMIT:
         price_label.setStyleSheet(f"color: {DISCOUNT_COLOR}; font-weight: bold; font-size: 16px;")
         old_price_label = QLabel(f"<s>{old_price:.2f} ₽</s>")
-        old_price_label.setStyleSheet("color: #757575; font-size: 12px;")
+        old_price_label.setStyleSheet("color: red; font-size: 12px;")
         old_price_label.setAlignment(Qt.AlignmentFlag.AlignRight)
         price_container.addWidget(old_price_label)
     else:
@@ -101,6 +101,7 @@ class MainWindow(QMainWindow):
         self.resize(800, 600)
         self.setWindowIcon(QIcon("resources/icon.ico"))
 
+        # Вызов строго в таком порядке
         self.setup_ui()                 
         self.setup_role_interface()     
 
@@ -129,7 +130,7 @@ class MainWindow(QMainWindow):
         header_layout.addWidget(self.logout_button)
         main_layout.addLayout(header_layout)
 
-        # Кнопки управления ролями (создаются строго ОДИН раз здесь)
+        # Панель кнопок ролей
         buttons_layout = QHBoxLayout()
         self.order_button = QPushButton("Купить подкаст")
         self.manager_button = QPushButton("Заказы (менеджер)")
@@ -141,13 +142,12 @@ class MainWindow(QMainWindow):
         buttons_layout.addStretch()
         main_layout.addLayout(buttons_layout)
 
-        # Контейнер для прокручиваемого списка
+        # Список подкастов вынесен в изолированный контейнер каталога
         container = QWidget()
         list_layout = QVBoxLayout()
         list_layout.setSpacing(10)
         list_layout.setContentsMargins(5, 5, 5, 5)
         
-        # Добавляем карточки в изолированный слой
         for product in self.products:
             list_layout.addWidget(create_card(product))
             
@@ -185,7 +185,6 @@ class MainWindow(QMainWindow):
             self.close()
 
     def setup_role_interface(self):
-        # Метод теперь отрабатывает корректно, ссылки на кнопки C++ не удалены
         self.order_button.hide()
         self.manager_button.hide()
         self.admin_button.hide()
