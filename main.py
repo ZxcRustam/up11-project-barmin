@@ -1,3 +1,4 @@
+# Изменения для ветки feature/new-design
 import os
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon, QPixmap
