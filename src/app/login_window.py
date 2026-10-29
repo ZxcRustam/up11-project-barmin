@@ -81,13 +81,15 @@ class LoginWindow(QWidget):
             self.role_id = result[1]
             self.full_name = " ".join(p for p in result[2:5] if p)
 
-            from main import MainWindow
-            self.main_window = MainWindow(role_id=self.role_id, full_name=self.full_name)
+            # Импортируем главное окно и передаем ТРИ параметра: роль, ФИО и user_id
+            from app.main import MainWindow
+            self.main_window = MainWindow(role_id=self.role_id, full_name=self.full_name, user_id=self.user_id)
             self.main_window.show()
             self.close()
 
     def login_as_guest(self):
-        from main import MainWindow
-        self.main_window = MainWindow(role_id=None, full_name="Гость")
+        from app.main import MainWindow
+        # Для гостя передаем user_id = None
+        self.main_window = MainWindow(role_id=None, full_name="Гость", user_id=None)
         self.main_window.show()
         self.close()

@@ -1,4 +1,4 @@
-from database import Database
+from app.database import Database
 
 db = Database()
 products = db.get_products()
